@@ -49,16 +49,26 @@ STARTING_DICE = 6
 #Number of simulations to do
 NUM_SIMS = 50000
 
-#Dice remaining to take a 5 or a 1. Not an ideal for gaining points possibly, so can be changed
+#Dice remaining for you to automatically take remaining 5s or 1s. Can be modified to optimize rolls
 #Ex. A roll is [3, 2, 5, 5] 
-#   if FIVES_DICE is set to 2 (or lower), the sim will take only 1 five, as it is needed to continue rolling. Then the dice 
-#   will be counted. since current dice = 3 and cutoff is 2 ([3, 2, 5]) the second 5 will NOT be taken
+#   First, the sim will take the first 5, as it is needed in order for play to continue, leaving [3, 2, 5] 
+#   It will then look at the FIVES_DICE.
+#   if FIVES_DICE is set to 2 (or lower), the sim will ignore the remaining 5
+#   since current dice = 3 and cutoff is 2 ([3, 2, 5]) the second 5 will NOT be taken
 #
-#   However, if FIVES_DICE is set to 3 (or higher), the first 5 will be taken as it is needed, then the dice will be counted.
-#   since current dice = 3, ([3, 2, 5]) the second 5 will then be taken
+#   However, if FIVES_DICE is set to 3 (or higher), since current dice = 3, the second 5 will be taken
+
 #Optimal: after 50,000 sims with every combo, optimal is for fives to be 3, and ones to be 5.
 FIVES_DICE = 3
 ONES_DICE = 4
+
+
+ONES_SINGLE = 6
+TWOS_SINGLE = 6
+THREES_SINGLE = 6
+FOURS_SINGLE = 6
+FIVES_SINGLE = 6
+SIXES_SINGLE = 6
 
 #Helper function, finds the 1s and 5s in the group.
 #Gets the list of dice, returns the index and quantity of 1s and 5s
@@ -117,6 +127,9 @@ def points(dice, roll):
     #6 of a kind
     if (curDice[0][1] == 6):
         return 0, 3000
+    #two pairs of 3
+    if(len(curDice) == 2 and curDice[1][1] == 3):
+        return 0, 2500
     #Checks for 5 of a kind
     if(curDice[0][1] == 5):
         cur_points += 2000
@@ -129,17 +142,16 @@ def points(dice, roll):
         curDice.remove(curDice[0])
         RMV_FLAG = 1
         dice -= 4
-
-    #------3 of a kind, which can be taken twice, rarely-----
-    while (len(curDice) > 0 and curDice[0][1] == 3):
-            if(curDice[0][1] == 1): #Ones have a special rule, where 3 = 300 instead of 100
-                cur_points += 300
-                curDice.remove(curDice[0])
-            else: #If not a 1..
-                cur_points += curDice[0][1]*100
-                curDice.remove(curDice[0])
-            dice -= 3 #Remove the dice
-            RMV_FLAG = 1    #Signal that rolling can continue, if the player has no more good choices
+    #Checks for 3 of a kind, but not 2 pairs of 3 since thats already taken
+    elif (curDice[0][1] == 3):
+        if(curDice[0][1] == 1): #Ones have a special rule, where 3 = 300 instead of 100
+            cur_points += 300
+            curDice.remove(curDice[0])
+        else: #If not a 1..
+            cur_points += curDice[0][1]*100
+            curDice.remove(curDice[0])
+        dice -= 3 #Remove the dice
+        RMV_FLAG = 1    #Signal that rolling can continue, if the player has no more good choices
 
     #Main loop, will go through and take out any 1s and 5s (if desired/needed)
     while (1):    
