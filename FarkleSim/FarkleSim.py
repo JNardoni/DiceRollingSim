@@ -14,10 +14,10 @@ import time
 # potentially lesser amounts? Thats what this is for!
 #
 # My results: 
-# 1. It is optimal to remove any 1 value rolled, assuming you have 4 dice remaining or fewer. This means
+# 1. It is optimal to remove any 1 value rolled if you have 4 dice remaining or fewer (including that 1). This means
 # that if your initial roll is a [1,1,2,3,4,6], it is best to pull aside one 1, and leave the second to
-# try again with 5 dice. Howvever, if the roll is [1,1,3,4,6] it is best to pull out both 1s, and try your 
-# continue with 3 dice.. if you choose to continue
+# try again with 5 dice. Howvever, if the roll is [1,1,3,4,6] it is best to pull out both 1s, and 
+# continue with 3 dice.. if you choose to try your luck, that is
 # 
 # 2. As 5's are worth less than 1's, 5s should be removed when you have 3 dice remaining or fewer. Unless
 # of course you choose not to continue
@@ -58,7 +58,7 @@ NUM_SIMS = 50000
 #
 #   However, if FIVES_DICE is set to 3 (or higher), since current dice = 3, the second 5 will be taken
 
-#Optimal: after 50,000 sims with every combo, optimal is for fives to be 3, and ones to be 5.
+#Optimal: after 50,000 sims with every combo, optimal is for fives to be 3, and ones to be 4.
 FIVES_DICE = 3
 ONES_DICE = 4
 
