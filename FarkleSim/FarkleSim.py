@@ -62,36 +62,81 @@ NUM_SIMS = 50000
 FIVES_DICE = 3
 ONES_DICE = 4
 
-
-ONES_SINGLE = 6
-TWOS_SINGLE = 6
-THREES_SINGLE = 6
-FOURS_SINGLE = 6
-FIVES_SINGLE = 6
-SIXES_SINGLE = 6
+# When should you take a triple of each die to optimize points?
+# Ex. if roll is [2,2,2,1,4,6] and the TWOS_TRIPLE is set to 4, the 1 will be taken, then as five dice remain, the triple 2s 
+# will not be. But if the same roll occured and TWOS_TRIPLE was set to 5, then it would be taken.
+# If these values are below 3, it will be the same as being at 3, since it will be taken anyway in order to push into the next round
+# 6 will also be functionally the same as 5 (except for 1s and 5s), since at 6 something must be taken. Either the set or a single value
+# 1 or 5 will be taken, which changes the number of dice to 5, thus taking the set of 3.
+# Should be 3-5
+ONES_TRIPLE = 6
+TWOS_TRIPLE = 6
+THREES_TRIPLE = 6
+FOURS_TRIPLE = 6
+FIVES_TRIPLE = 6
+SIXES_TRIPLE = 6
 
 #Helper function, finds the 1s and 5s in the group.
 #Gets the list of dice, returns the index and quantity of 1s and 5s
 def findDice(curDice):
-    quant1 = 0 #Default to all 0s
+    quant1 = 0 #Default to all 0s for quantities and index positions
     ind1 = 0
     quant5 = 0
     ind5 = 0
     FINISH_FLAG = 0 #this flag makes sure that the program always knows if any combination of only 1s and 5s
-                       #are remaining. This way all dice can be taken, and the rolling can continue
+                    #are remaining. This way all dice can be taken, and the rolling can continue
+    fin_count = len(curDice)  #Counter used to determine how many different dice are in use. used to determine if the FINISH_FLAG should be set
+                                #Basically used to keep track of unaccounted dice. If, at the end, all dice are accounted for (can be pulled aside)
+                                #The flag is set and can immediately continue
 
+    #Cycles through all rolled dice, looking for 1s and 5s. If it finds any, it marks their index/quantity
+    #Also removes 1 from the fin_count dice to be used later to see if the flag should be set
     for i in range(len(curDice)):
         if (1 == curDice[i][0]): #If a 1, sets index/quant
             ind1 = i
             quant1 = curDice[i][1]
+            fin_count -= 1 #Subtract 1 from the unaccounted dice
         if (5 == curDice[i][0]): #if a 5, sets index/quant
             ind5 = i
             quant5 = curDice[i][1]
+            fin_count -= 1 #Subtract 1 from the unaccounted dice
 
-    if (len(curDice) == 2 and quant1 > 0 and quant5 > 0):
-        FINISH_FLAG = 1 #FINISH_FLAG symbols that all dice can be used, speeding up the process and allowing various FIVES_DICE and ONES_DICE values
+    # Sets the finish flag. FINISH_FLAG symbols that all dice can be used, and the rerolling begins. It speeds up the process
+    # by making the points auto-take all all 1s, 5s, and 3 sets of dice
+    # The ONLY WAY dice can be pulled out this way is if theirs a combination of 1s, 5s, and up to a single 3 set. Since 1s and 5s have already been
+    # accounted for, now just needs to see if any remaining dice form a 3 set
+    if (fin_count == 1 and curDice[0][1] == 3): #If theres only one 1 number on the dice unaccounted for, and the most common dice has 3 dice
+        if (curDice[0][0] != 1 and curDice[0][0] != 5): #Makes sure that spot is NOT equal to the  1 or 5
+            FINISH_FLAG = 1 #FINISH_FLAG symbols that all dice can be used, speeding up the process and allowing various FIVES_DICE and ONES_DICE values
+
     return quant1, ind1, quant5, ind5, FINISH_FLAG
 
+# Recieves the number of dice, and the value of the triple
+# If the dice <= the set value of when you should take a triple, then it returns true
+# Otherwise, it returns false
+def TakeSet(dice, value):
+    if (value == 1):
+        if (dice <= ONES_TRIPLE):
+            return True
+    elif (value == 2):
+        if (dice <= TWOS_TRIPLE):
+            return True
+    elif (value == 3):
+        if (dice <= THREES_TRIPLE):
+            return True
+    elif (value == 4):
+        if (dice <= FOURS_TRIPLE):
+            return True
+    elif (value == 5):
+        if (dice <= FIVES_TRIPLE):
+            return True
+    elif (value == 6):
+        if (dice <= SIXES_TRIPLE):
+            return True
+    return False
+
+def removeSets(dice, curPoints, curDice):
+    i = w
 
 # Calculates how many points the user has made this roll
 # Finds any pairs, straights, etc. Then takes the set values into account to see
@@ -106,6 +151,7 @@ def points(dice, roll):
 
     #sort the tuples, in order of most occurances to least
     #Allows the code to look for pairs in only the first spot in the array
+    #A roll like [1,6,3,5,3,2] will get stored as ([3,2],[6,1],[6,5],[5,1],[1,1]) as it has 2 3s and 1 of the other numbers
     curDice = parse.most_common(6)
 
     #counts the points for the individual roll
@@ -114,6 +160,7 @@ def points(dice, roll):
     RMV_FLAG = 0 
 
     #----------These combos can only be taken a max of once per roll----------
+    # These are must takes. If they show up, the user will take them automatically
 
     #three pairs
     if (len(curDice) == 3 and curDice[2][1] == 2):
@@ -142,71 +189,102 @@ def points(dice, roll):
         curDice.remove(curDice[0])
         RMV_FLAG = 1
         dice -= 4
-    #Checks for 3 of a kind, but not 2 pairs of 3 since thats already taken
-    elif (curDice[0][1] == 3):
-        if(curDice[0][1] == 1): #Ones have a special rule, where 3 = 300 instead of 100
-            cur_points += 300
-            curDice.remove(curDice[0])
-        else: #If not a 1..
-            cur_points += curDice[0][1]*100
-            curDice.remove(curDice[0])
-        dice -= 3 #Remove the dice
-        RMV_FLAG = 1    #Signal that rolling can continue, if the player has no more good choices
-
-    #Main loop, will go through and take out any 1s and 5s (if desired/needed)
+ 
+    #------ Main loop. Any "Must take" (4,5,6 of a king, straight, etc) is already taken------
+    # Takes dice in a set order:
+    #   If theres a triple, and dice > the set amount to take them
+    #   Takes any single 1s, if the dice > the set amount to take them
+    #   Takes any single 5s, if the dice > the set amount to take them
+    #   Takes a single 1, if it is needed for play to continue
+    #   Takes a single 5, if it is needed for play to continue
+    #   Takes any triple that it doesnt want to take, if it is needed for play to continue
+    # If no dice can be taken, or dice end, returns to Turn
     while (1):    
-        #If all dice are used,m passes back for a new roll
+        #If all dice are used, passes back for a new roll
         if(dice == 0):
             return 0, cur_points
-        else:
-            #Finds the quantities and locations of 1s and 5s. These are all that remain of use to the player,
-            #And will continue to loop until the player loses, all dice are used, there are no 1s or 5s, or
-            #it is not advantageoud to remove any 1s and 5s
-            (quant1, ind1, quant5, ind5, FINISH_FLAG) = findDice(curDice)
-            #checks the finish flag. If set, only 1s and 5s remain and the round restarts
-            if(FINISH_FLAG == 1):
+        #Checks for any triples, but also checks if the user wants to take them. triple 2s may not be worth taking at the beginning
+        if (curDice[0][1] == 3):
+            if (TakeSet(dice, curDice[0][0])):
+                if(curDice[0][0] == 1): #Ones have a special rule, where 3 = 300 instead of 100
+                    cur_points += 300
+                    curDice.remove(curDice[0])
+                else: #If not a 1..
+                    cur_points += curDice[0][0]*100
+                    curDice.remove(curDice[0])
+                dice -= 3 #Remove the dice
+                RMV_FLAG = 1
+
+        #Finds the quantities and locations of 1s and 5s. These are all that remain of use to the player,
+        #And will continue to loop until the player loses, all dice are used, there are no 1s or 5s, or
+        #it is not advantageoud to remove any 1s and 5s
+        (quant1, ind1, quant5, ind5, FINISH_FLAG) = findDice(curDice)
+        #checks the finish flag. If set, only 1s, 5s, and triples remainan and the round restarts
+        if(FINISH_FLAG == 1):
+            if(curDice[0][1] == 3): #If theres a set of 3, there are 3 options.  or its a set of 2/3/4/6 with possioble 1s or 5s
+                if(quant1 == 3): #Option 1: Its a set of 1s, with possible 5s,
+                    cur_points += 300   #Returns 300 + 50*quant5
+                    cur_points += quant5 * 50
+                elif(quant5 == 3):#Option 2: its a set of 5s with possibnle ones
+                    cur_points += 500
+                    cur_points += 100*quant1
+                else:              #Option 3: Its a set of 2/3/4/6 with possible 1s or 5s
+                    cur_points +=curDice[0][0] * 100
+                    cur_points += 100 * quant1
+                    cur_points += 50 * quant5
+            else: #only 1s and 5s, 1s worth 100 each, 5s worth 50 each
                 cur_points += quant1 * 100
                 cur_points += quant5 * 50
-                return(0, cur_points)
-            #checks for any lone ones
-            if(dice <= ONES_DICE and quant1 > 0):
-                cur_points += quant1 * 100
-                dice -= quant1
+            return(0, cur_points)
+        #checks for any lone ones
+        elif(dice <= ONES_DICE and quant1 > 0):
+            cur_points += quant1 * 100
+            dice -= quant1
+            curDice.remove(curDice[ind1])
+            RMV_FLAG = 1
+        #Checks for any lone 5s. Can change how many values are needed to take 5s
+        elif(dice <= FIVES_DICE and quant5 > 0):
+            cur_points += quant5 * 50
+            dice -= quant5
+            curDice.remove(curDice[ind5])
+            RMV_FLAG = 1
+        #Checks if a 1 is NEEDED. If there is nothing else, one available 1 is taken
+        elif(RMV_FLAG == 0 and quant1 > 0):
+            if (quant1 > 1):
+                curDice.remove(curDice[ind1]) #Tuples are immutable. Removes the index instead
+                curDice.append([ind1,quant1-1]) #and readds it, but with one less 1  
+            else:
                 curDice.remove(curDice[ind1])
-                RMV_FLAG = 1
-            #Checks for any lone 5s. Can change how many values are needed to take 5s
-            elif(dice <= FIVES_DICE and quant5 > 0):
-                cur_points += quant5 * 50
-                dice -= quant5
+            dice -= 1
+            cur_points += 100
+            RMV_FLAG = 1
+        #Checks if a 5 is NEEDED. If there is nothing else, one available 5 is taken
+        elif(RMV_FLAG == 0 and quant5 > 0):
+            if (quant5 > 1):
+                curDice.remove(curDice[ind5]) #Tuples are immutable. Removes the index instead
+                curDice.append([ind1,quant5-1]) #and readds it, but with one less 5  
+            else:
                 curDice.remove(curDice[ind5])
-                RMV_FLAG = 1
-            #Checks if a 1 is NEEDED. If there is nothing else, one available 1 is taken
-            elif(RMV_FLAG == 0 and quant1 > 0):
-                if (quant1 > 1):
-                    curDice.remove(curDice[ind1]) #Tuples are immutable. Removes the index instead
-                    curDice.append([ind1,quant1-1]) #and readds it, but with one less 1  
-                else:
-                    curDice.remove(curDice[ind1])
-                dice -= 1
-                cur_points += 100
-                RMV_FLAG = 1
-            #Checks if a 5 is NEEDED. If there is nothing else, one available 5 is taken
-            elif(RMV_FLAG == 0 and quant5 > 0):
-                if (quant5 > 1):
-                    curDice.remove(curDice[ind5]) #Tuples are immutable. Removes the index instead
-                    curDice.append([ind1,quant5-1]) #and readds it, but with one less 5  
-                else:
-                    curDice.remove(curDice[ind5])
-                dice -= 1
-                cur_points += 50
-                RMV_FLAG = 1
-            #Nothing left to remove, passes back the remaining dice and points scored
-            elif(RMV_FLAG == 1):
-                return dice, cur_points
-            #If there is nothing possible to take, the turn ends
-            elif(RMV_FLAG == 0):
-              #  print("Farkle :(")
-                return -1, cur_points
+            dice -= 1
+            cur_points += 50
+            RMV_FLAG = 1
+        #Checks if a pair is had that it deoesnt want to take and nothing has been removed
+        elif(RMV_FLAG == 0 and curDice[0][1] == 3):
+            if(curDice[0][0] == 1): #Ones have a special rule, where 3 = 300 instead of 100
+                cur_points += 300
+                curDice.remove(curDice[0])
+            else: #If not a 1..
+                cur_points += curDice[0][0]*100
+                curDice.remove(curDice[0])
+            dice -= 3 #Remove the dice
+            RMV_FLAG = 1            
+        #Nothing left to remove, passes back the remaining dice and points scored
+        elif(RMV_FLAG == 1):
+            return dice, cur_points
+        #If there is nothing possible to take, the turn ends
+        elif(RMV_FLAG == 0):
+ #           print("Farkle :(")
+            return -1, cur_points
 
 
 def NewRoll(dice, round_points):
@@ -215,7 +293,7 @@ def NewRoll(dice, round_points):
     for i in range(dice): # rolls new dice
         roll.append(random.randint(1,6))
 
-    #print(dice , ' dice | roll: ', roll)
+#    print(dice , ' dice | roll: ', roll)
     (dice, roll_points) = points(dice, roll)
 
     round_points += roll_points 
@@ -237,7 +315,7 @@ def turn():
 
         #If all dice are used, a new round begins and the player keeps rolling 
         if (dice == 0):
-           # print("All dice used! Player continues :)  --  Current points: ", round_points)
+ #           print("All dice used! Player continues :)  --  Current points: ", round_points)
             dice = 6
 
     TOTAL_POINTS += round_points
@@ -245,17 +323,44 @@ def turn():
 
 #    print("Round points: ", round_points)
 
-
-# Can use this to test the different times in which you take the ones and five
-# Useful for knowing if you should dice back into your pile or not
-def TestCutoff():
+#Useful for trying to figure out when you should start to take pairs. Is it a good idea to bother taking a pair of 2s?
+#Or should you take the 1 instead, then try to reroll with 5 dice
+def TestPairsCutoff():
     global TOTAL_POINTS
     global TOTAL_ROUNDS
 
+    for ONES_TRIPLE in range(4,7):    #Continue through each combination of ONES and FIVES to find the optimal set 
+        for TWOS_TRIPLE in range(4,7):
+            for THREES_TRIPLE in range(4,7):
+                for FOURS_TRIPLE in range(4,7):
+                    for FIVES_TRIPLE in range(4,7):
+                        for SIXES_TRIPLE in range(4,7):
+                            for k in range(NUM_SIMS):
+                                turn();    
+
+                            print(ONES_TRIPLE, ",", TWOS_TRIPLE, ",", THREES_TRIPLE, ",", FOURS_TRIPLE, ",", FIVES_TRIPLE, ",", SIXES_TRIPLE," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", TOTAL_POINTS/NUM_SIMS)
+
+ #           rdpoints[ONES_TRIPLE][TWOS_TRIPLE] = TOTAL_POINTS #store this sims points
+                            TOTAL_POINTS = 0 #Reset for the next sim
+                            TOTAL_ROUNDS = 0
+    #Test finished, print results
+    #for i in range(2,6):
+    #    for j in range(2,6):
+    #       print(i,",", j," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", rdpoints[i][j]/NUM_SIMS)
+
+
+# Can use this to test the different times in which you take SINGLE ones and five
+# Useful for knowing if you should dice back into your pile or not, or leave as many as you can to reroll with more dice to try for pairs
+def TestSingleCutoff():
+    global TOTAL_POINTS
+    global TOTAL_ROUNDS
+    global STARTING_DICE
+
+    
     rdpoints = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
 
-    for ONES_DICE in range(2,6):    #Continue through each combination of ONES and FIVES to find the optimal set 
-        for FIVES_DICE in range(2,6):
+    for ONES_DICE in range(2,7):    #Continue through each combination of ONES and FIVES to find the optimal set 
+        for FIVES_DICE in range(2,7):
 
             for k in range(NUM_SIMS):
                 turn();    
@@ -267,13 +372,13 @@ def TestCutoff():
             TOTAL_ROUNDS = 0
     #Test finished, print results
     for i in range(2,7):
-        for j in range(2,6):
+        for j in range(2,7):
            print(i,",", j," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", rdpoints[i][j]/NUM_SIMS)
 
 
 # Can use this to test how many points youll earn, on average, when starting from any number of dice
 # Useful for if youre not sure if its worth gambling and continueing to play
-def TestStarting():
+def TestStartingDice():
     global TOTAL_POINTS
     global TOTAL_ROUNDS
     global STARTING_DICE
@@ -293,6 +398,12 @@ def TestStarting():
     for i in range(1,7):
         print("Starting dice: ", i, "Average points aquired: ", rdpoints[i]/50000 )
 
+#Runs the current global configurations, just to see if things change on a small scale
+def testCurrentConfig():
+    for i in range(NUM_SIMS):
+        turn()
+    print("Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", TOTAL_POINTS/TOTAL_ROUNDS)
+
 # Just runs for fun!
 # Id suggest turning on the print statemenets to see how the game goes
 def TestforFun():    
@@ -303,4 +414,4 @@ def TestforFun():
 
 
 # Which simulation you would like to test
-TestStarting()
+TestPairsCutoff()
