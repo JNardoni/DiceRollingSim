@@ -23,16 +23,17 @@ import time
 # of course you choose not to continue
 #
 # 3. Continuing: The results of average rolls 
-# Starting dice:  1 Average points aquired:  280.539
-# Starting dice:  2 Average points aquired:  259.849
-# Starting dice:  3 Average points aquired:  305.59
-# Starting dice:  4 Average points aquired:  380.09
-# Starting dice:  5 Average points aquired:  514.964
-# Starting dice:  6 Average points aquired:  773.831
+# Starting dice:  1 Average points aquired:  305.462
+# Starting dice:  2 Average points aquired:  245.926
+# Starting dice:  3 Average points aquired:  321.848
+# Starting dice:  4 Average points aquired:  411.313
+# Starting dice:  5 Average points aquired:  542.185
+# Starting dice:  6 Average points aquired:  841.255
+
 #
 # By knowing the average result when you have x number of dice remaining, you know when it is advantageous
-# to stop playing, and when it is best to take the risk and continue. For example, if you have > 305 points
-# andonly 3 dice remaining, it is best mathematically to keep the points and not take the risk rerolling
+# to stop playing, and when it is best to take the risk and continue. For example, if you have > 321 points
+# and only 3 dice remaining, it is best mathematically to keep the points and not take the risk rerolling
 # This, however does not take into account that other players may be closing in on victory, so take everything
 # in stride and have fun :)
 #
@@ -41,6 +42,9 @@ import time
 #used to keep track of average points
 TOTAL_POINTS = 0
 TOTAL_ROUNDS = 0
+
+#Keeps track of the standard deviation of point values, to calculate an error %
+STANDARD_DEVIATION = 0
 
 #In order to simulate likely points from starting at a different number of dice
 #Ex. When is it worth it to continue rolling with 3 dice? Can find an expected number of points etc
@@ -68,10 +72,11 @@ ONES_DICE = 4
 # If these values are below 3, it will be the same as being at 3, since it will be taken anyway in order to push into the next round
 # 6 will also be functionally the same as 5 (except for 1s and 5s), since at 6 something must be taken. Either the set or a single value
 # 1 or 5 will be taken, which changes the number of dice to 5, thus taking the set of 3.
-# Should be 3-5
-ONES_TRIPLE = 6
-TWOS_TRIPLE = 6
-THREES_TRIPLE = 6
+# Should be 3-5, 1s and 5s may be 3-6
+#Optimal: 1s should be taken 4 dice remaining, 2s should be taken only to complete the roll, 3s should be taken at 4, and the others at 6
+ONES_TRIPLE = 4
+TWOS_TRIPLE = 1
+THREES_TRIPLE = 4
 FOURS_TRIPLE = 6
 FIVES_TRIPLE = 6
 SIXES_TRIPLE = 6
@@ -134,9 +139,6 @@ def TakeSet(dice, value):
         if (dice <= SIXES_TRIPLE):
             return True
     return False
-
-def removeSets(dice, curPoints, curDice):
-    i = w
 
 # Calculates how many points the user has made this roll
 # Finds any pairs, straights, etc. Then takes the set values into account to see
@@ -323,26 +325,23 @@ def turn():
 
 #    print("Round points: ", round_points)
 
-#Useful for trying to figure out when you should start to take pairs. Is it a good idea to bother taking a pair of 2s?
+#Useful for trying to figure out when you should start to take pairs. Is it a good idea to take a pair of 2s?
 #Or should you take the 1 instead, then try to reroll with 5 dice
 def TestPairsCutoff():
     global TOTAL_POINTS
     global TOTAL_ROUNDS
 
-    for ONES_TRIPLE in range(4,7):    #Continue through each combination of ONES and FIVES to find the optimal set 
-        for TWOS_TRIPLE in range(4,7):
-            for THREES_TRIPLE in range(4,7):
-                for FOURS_TRIPLE in range(4,7):
-                    for FIVES_TRIPLE in range(4,7):
-                        for SIXES_TRIPLE in range(4,7):
-                            for k in range(NUM_SIMS):
-                                turn();    
+    for ONES_TRIPLE in range(3,7):    #Continue through each combination of ONES and FIVES to find the optimal set 
+        for TWOS_TRIPLE in range(3,6):
+            for THREES_TRIPLE in range(3,6):
+                for k in range(NUM_SIMS):
+                    turn();    
 
-                            print(ONES_TRIPLE, ",", TWOS_TRIPLE, ",", THREES_TRIPLE, ",", FOURS_TRIPLE, ",", FIVES_TRIPLE, ",", SIXES_TRIPLE," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", TOTAL_POINTS/NUM_SIMS)
+                print(ONES_TRIPLE, ",", TWOS_TRIPLE, ",", THREES_TRIPLE, ",", FOURS_TRIPLE, ",", FIVES_TRIPLE, ",", SIXES_TRIPLE," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", TOTAL_POINTS/NUM_SIMS)
 
  #           rdpoints[ONES_TRIPLE][TWOS_TRIPLE] = TOTAL_POINTS #store this sims points
-                            TOTAL_POINTS = 0 #Reset for the next sim
-                            TOTAL_ROUNDS = 0
+                TOTAL_POINTS = 0 #Reset for the next sim
+                TOTAL_ROUNDS = 0
     #Test finished, print results
     #for i in range(2,6):
     #    for j in range(2,6):
@@ -359,8 +358,8 @@ def TestSingleCutoff():
     
     rdpoints = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
 
-    for ONES_DICE in range(2,7):    #Continue through each combination of ONES and FIVES to find the optimal set 
-        for FIVES_DICE in range(2,7):
+    for ONES_DICE in range(2,6):    #Continue through each combination of ONES and FIVES to find the optimal set 
+        for FIVES_DICE in range(2,6): #Only goes up to 5. If at 6, then its either taken as a necessity, or another dice is taken which lowers it to 5 anyway
 
             for k in range(NUM_SIMS):
                 turn();    
@@ -371,9 +370,9 @@ def TestSingleCutoff():
             TOTAL_POINTS = 0 #Reset for the next sim
             TOTAL_ROUNDS = 0
     #Test finished, print results
-    for i in range(2,7):
-        for j in range(2,7):
-           print(i,",", j," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", rdpoints[i][j]/NUM_SIMS)
+#    for i in range(2,6):
+#        for j in range(2,6):
+#           print(i,",", j," |  Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", rdpoints[i][j]/NUM_SIMS)
 
 
 # Can use this to test how many points youll earn, on average, when starting from any number of dice
@@ -395,11 +394,11 @@ def TestStartingDice():
         TOTAL_POINTS = 0 #reset for the next sim
         TOTAL_ROUNDS = 0
     #Test finished, print results
-    for i in range(1,7):
-        print("Starting dice: ", i, "Average points aquired: ", rdpoints[i]/50000 )
+#    for i in range(1,7):
+#        print("Starting dice: ", i, "Average points aquired: ", rdpoints[i]/50000 )
 
 #Runs the current global configurations, just to see if things change on a small scale
-def testCurrentConfig():
+def TestCurrentConfig():
     for i in range(NUM_SIMS):
         turn()
     print("Total points: ", TOTAL_POINTS, " | Total rounds: ", TOTAL_ROUNDS, " | Average points: ", TOTAL_POINTS/TOTAL_ROUNDS)
@@ -414,4 +413,4 @@ def TestforFun():
 
 
 # Which simulation you would like to test
-TestPairsCutoff()
+TestSingleCutoff()
